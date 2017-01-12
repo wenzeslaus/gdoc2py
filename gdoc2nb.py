@@ -182,6 +182,19 @@ def module_to_python(module):
     string += ')'
     return string
 
+JUPYTER_INTRODUCTION_CODE = """\
+# This is a quick introduction into Jupyter Notebook.
+# Python code can be excecuted like this:
+a = 6
+b = 7
+c = a * b
+print "Answer is", c
+# Python code can be mixed with command line code (Bash).
+# It is enough just to prefix the command line with an exclamation mark:
+!echo "Answer is $c"
+# Use Shift+Enter to execute this cell. The result is below.
+"""
+
 GRASS_START_CODE = """\
 import os
 import sys
@@ -220,6 +233,7 @@ os.environ['GRASS_LEGEND_FILE'] = 'legend.txt'
 
 def start_of_grass_session(string, grass, gisdbase, location, mapset):
     return [
+        JUPYTER_INTRODUCTION_CODE.strip(),
         GRASS_START_CODE.strip().format(
             grass=grass, gisdbase=gisdbase, location=location, mapset=mapset),
         GRASS_SETTINGS_CODE.strip(),
