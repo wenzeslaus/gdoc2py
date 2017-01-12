@@ -2,6 +2,11 @@
 
 """
 
+
+(C) 2016 by Vaclav Petras
+
+This program is free software under the GNU General Public License
+(>=v2). Read the file LICENSE for details.
 """
 
 import nbformat as nbf
