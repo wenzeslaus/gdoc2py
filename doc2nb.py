@@ -222,6 +222,7 @@ def start_of_grass_session(string, grass, gisdbase, location, mapset):
         ]
 
 
+# TODO: refactor the following 4 functions
 def bash_to_python(string):
     output = []
     prev_line = ''
@@ -249,6 +250,138 @@ def bash_to_python(string):
     if d_command_present and last_command != 'd.out.file':
         output.append('Image(filename="map.png")')
     return ["\n".join(output)]
+
+
+def bash_to_pure_bash_cells(string):
+    """Create cells for pure Bash notebook (with Bash kernel)"""
+    # TODO: share code with the function below
+    # TODO: preserve syntax more while still handling d.out.file
+    cells = []
+    output = []
+    prev_line = ''
+    d_command_present = False
+    last_command = None
+    for line in string.splitlines():
+        if line:
+            if line.endswith('\\'):
+                prev_line += line + "\n"
+                continue
+            elif prev_line:
+                line = prev_line + line
+                prev_line = ''
+            module = string_to_module(line)
+            # TODO: potentially split to cells when d.out.file
+            if line.startswith('d.out.file'):
+                cells.append("\n".join(output))
+                # pseudo cell magic to be replaced later
+                output = ['%%markdown', '![image](map.png)']
+                cells.append("\n".join(output))
+                output = []
+            else:
+                output.append(line)
+                if line.startswith('d.'):
+                    d_command_present = True
+            last_command = line
+        else:
+            output.append("\n")
+    if output:
+        cells.append("\n".join(output))
+    if d_command_present and not last_command.startswith('d.out.file'):
+        cells.append("\n".join(['%%markdown', '![image](map.png)']))
+    return cells
+
+
+def bash_to_cells(string):
+    r"""Create cells for a Python notebook using %%bash cell magic
+
+    >>> bash_to_cells("ls")
+    ['%%bash\nls']
+
+    >>> bash_to_cells("ls -la\nls -la")
+    ['%%bash\nls -la\nls -la']
+
+    >>> t = "g.region raster=elevation\nr.univar elevation\nd.rast elevation"
+    >>> cells = bash_to_cells(t)
+    >>> type(cells)
+    <type 'list'>
+    >>> len(cells)
+    2
+    >>> print cells[0]
+    %%bash
+    g.region raster=elevation
+    r.univar elevation
+    d.rast elevation
+    >>> print cells[1]
+    Image(filename="map.png")
+
+    """
+    # TODO: preserve syntax more while still handling d.out.file
+    cells = []
+    output = ['%%bash']
+    prev_line = ''
+    d_command_present = False
+    last_command = None
+    for line in string.splitlines():
+        if line:
+            if line.endswith('\\'):
+                prev_line += line + "\n"
+                continue
+            elif prev_line:
+                line = prev_line + line
+                prev_line = ''
+            module = string_to_module(line)
+            # TODO: potentially split to cells when d.out.file
+            if line.startswith('d.out.file'):
+                cells.append("\n".join(output))
+                cells.append('Image(filename="map.png")')
+                output = ['%%bash']
+            else:
+                output.append(line)
+                if line.startswith('d.'):
+                    d_command_present = True
+            last_command = line
+        else:
+            output.append("\n")
+    if len(output) > 1:
+        #print output
+        cells.append("\n".join(output))
+    if d_command_present and not last_command.startswith('d.out.file'):
+        cells.append('Image(filename="map.png")')
+    return cells
+
+
+def bash_to_exclamations(string):
+    """Create cells for a Python notebook using exclamation mark"""
+    # the ! syntax is limited just to simple commands
+    # TODO: but pipe is supported as long as it is in one line
+    output = []
+    prev_line = ''
+    d_command_present = False
+    last_command = None
+    for line in string.splitlines():
+        if line:
+            if line.endswith('\\'):
+                prev_line += line + "\n"
+                continue
+            elif prev_line:
+                line = prev_line + line
+                prev_line = ''
+            module = string_to_module(line)
+            # TODO: potentially split to cells when d.out.file
+            if line.startswith('d.out.file'):
+                output.append('Image(filename="map.png")')
+            else:
+                # exclamations support continued lines with backslash
+                output.append('!' + line)
+                if module.name.startswith('d.'):
+                    d_command_present = True
+            last_command = module.name
+        else:
+            output.append("\n")
+    if d_command_present and last_command != 'd.out.file':
+        output.append('Image(filename="map.png")')
+    return ["\n".join(output)]
+
 
 class DummyProcessor(object):
     def __getattr__(self, name):
@@ -565,6 +698,109 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
         self.data = ''
 
 
+class HTMLBashCodeToNotebookConverter(HTMLParser):
+    r"""
+
+    >>> t = "g.region raster=elevation\nr.univar elevation\nd.rast elevation"
+    >>> n = nb.new_notebook()
+    >>> c = HTMLBashCodeToNotebookConverter(n)
+    >>> c.feed(t)
+    >>> c.finish()
+    >>> len(n['cells'])
+    1
+    >>> print(n['cells'][0]['source'])
+    !g.region raster=elevation
+    !r.univar elevation
+    !d.rast elevation
+    Image(filename="map.png")
+
+    >>> n = nb.new_notebook()
+    >>> c = HTMLBashCodeToNotebookConverter(n, syntax='cell')
+    >>> c.feed(t)
+    >>> c.finish()
+    >>> len(n['cells'])
+    2
+    >>> print(n['cells'][0]['source'])
+    %%bash
+    g.region raster=elevation
+    r.univar elevation
+    d.rast elevation
+    >>> print(n['cells'][1]['source'])
+    Image(filename="map.png")
+
+    >>> n = nb.new_notebook()
+    >>> c = HTMLBashCodeToNotebookConverter(n, syntax='pure')
+    >>> c.feed(t)
+    >>> c.finish()
+    >>> len(n['cells'])
+    2
+    >>> print(n['cells'][0]['source'])
+    g.region raster=elevation
+    r.univar elevation
+    d.rast elevation
+    >>> print(n['cells'][1]['source'])  # pseudo cell magic
+    %%markdown
+    ![image](map.png)
+
+    """
+    def __init__(self, notebook, syntax='!', grass=None, gisdbase=None, location=None, mapset=None):
+        HTMLParser.__init__(self)
+
+        if syntax not in ('pure', 'cell', '!'):
+            raise ValueError("Requested output syntax not recognized")
+        self._syntax = syntax
+
+        self.nb = notebook
+        self.data = ''
+
+        self.grass = grass
+        self.gisdbase = gisdbase
+        self.location = location
+        self.mapset = mapset
+
+    def handle_data(self, data):
+        self.data += data
+
+    def handle_entityref(self, name):
+        c = unichr(name2codepoint[name])
+        self.data += c
+
+    def handle_comment(self, data):
+        if data.strip().startswith('d.erase'):
+            self.data += data.strip()
+
+    def finish(self):
+        cell = ''
+        for line in self.data.splitlines():
+            line = re.sub('<!--.*-->', '', line)
+            skip_line = False
+            for ignored_line in ignored_lines:
+                if ignored_line.search(line):
+                    skip_line = True
+            if not skip_line:
+                for regexp, replacement in code_replacemets:
+                    line = regexp.sub(replacement, line)
+                if line:
+                    cell += line + "\n"
+            previous_code_line = line
+        if re.search('^grass.?.?$', cell):
+            cells = start_of_grass_session(
+                cell, self.grass, self.gisdbase, self.location, self.mapset)
+            # TODO: the env vars need to be in bash for the pure bash
+            cells = ['# using Python to initialize GRASS GIS\n' + cell for cell in cells]
+        else:
+            if self._syntax == 'pure':
+                cells = bash_to_pure_bash_cells(cell.strip())
+            elif self._syntax == 'cell':
+                cells = bash_to_cells(cell.strip())
+            else:
+                cells = bash_to_exclamations(cell.strip())
+        for cell in cells:
+            # TODO: deal with the pseudo cell magic %%markdown cells
+            self.nb['cells'].append(nb.new_code_cell(cell))
+        self.data = ''
+
+
 class HTMLFileContentToPythonNotebookConverter(HTMLParser):
     r"""
 
@@ -736,6 +972,9 @@ def main():
     parser = argparse.ArgumentParser(description='Convert HTML documentation to Jupyter Notebook.')
     parser.add_argument('files', metavar='FILE', nargs='+',
                         help='Files to convert')
+    parser.add_argument('--lang', dest='lang', default='python',
+                        choices=['python', 'bash', 'bash-cells', 'pure-bash'],
+                        help='GRASS GIS executable')
     # TODO: allow no provided
     # TODO: allow mapset as full path
     parser.add_argument('--grass', dest='grass', default='grass',
@@ -749,6 +988,8 @@ def main():
     args = parser.parse_args()
     input_ = args.files[0]
     output = args.files[1]
+
+    lang = args.lang
 
     processor = Processor()
     splitter = Splitter(processor)
@@ -766,7 +1007,22 @@ def main():
 
     for block in processor.blocks:
         if block['block_type'] == 'code':
-            c = HTMLBashCodeToPythonNotebookConverter(notebook, args.grass, gisdbase=args.gisdbase, location=args.location, mapset=args.mapset)
+            if lang == 'python':
+                c = HTMLBashCodeToPythonNotebookConverter(
+                    notebook, grass=args.grass,
+                    gisdbase=args.gisdbase, location=args.location,
+                    mapset=args.mapset)
+            if lang in ('bash', 'bash-cells', 'pure-bash'):
+                if lang == 'bash':
+                    syntax = '!'
+                elif lang == 'bash-cells':
+                    syntax = 'cell'
+                elif lang == 'pure-bash':
+                    syntax = 'pure'
+                c = HTMLBashCodeToNotebookConverter(
+                    notebook, syntax=syntax, grass=args.grass,
+                    gisdbase=args.gisdbase, location=args.location,
+                    mapset=args.mapset)
             c.feed("\n".join(block['content']))
             c.finish()
         elif block['block_type'] == 'file_content':
