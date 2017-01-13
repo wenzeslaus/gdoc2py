@@ -1055,7 +1055,8 @@ def main():
             c.finish()
             filenames.extend(c.download_files)
 
-    add_file_downloads(notebook, filenames)
+    if filenames:
+        add_file_downloads(notebook, filenames)
     finish_session(notebook)
 
     with open(output, 'w') as f:
