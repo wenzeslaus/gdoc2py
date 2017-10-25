@@ -184,7 +184,7 @@ def module_to_python(module):
 
 JUPYTER_INTRODUCTION_CODE = """\
 # This is a quick introduction into Jupyter Notebook.
-# Python code can be excecuted like this:
+# Python code can be executed like this:
 a = 6
 b = 7
 c = a * b
