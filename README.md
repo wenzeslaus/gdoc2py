@@ -22,6 +22,7 @@ of it.
 * writing pure Bash (or Python, but not a notebook) for documentation testing purposes
  * https://github.com/ncsu-geoforall-lab/geospatial-modeling-course/blob/master/doc2tests.py
 * reading some simplified non-JSON (likely Markdown) representation of Jupyer Notebooks
+* download links marked with the `download` attribute
 
 ## Author
 
