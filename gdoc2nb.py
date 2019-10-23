@@ -528,10 +528,11 @@ class Splitter(object):
     add_text Text.
 
     """
-    def __init__(self, processor):
+    def __init__(self, processor, code_tags=None):
+        assert len(code_tags) == 2
         self.processor = processor
-        self.code_start = re.compile(r'^<pre><code>$')
-        self.code_end = re.compile(r'^</code></pre>$')
+        self.code_start = re.compile(code_tags[0])
+        self.code_end = re.compile(code_tags[1])
         self.file_content_start = re.compile(r'^<pre data-filename=.*>$')
         self.file_content_end = re.compile(r'^</pre>$')
         self.comment_start = re.compile(r'^\s*<!--')
@@ -1032,6 +1033,12 @@ def main():
                         help='GRASS GIS Location')
     parser.add_argument('--mapset', dest='mapset', required=True,
                         help='GRASS GIS Mapset')
+    parser.add_argument('--code-start', dest='code_start',
+                        default=r"^<pre><code>$",
+                        help='Starting tags of a code block (regular expression)')
+    parser.add_argument('--code-end', dest='code_end',
+                        default=r"^</code></pre>$",
+                        help='Ending tags of a code block (regular expression)')
     args = parser.parse_args()
     input_ = args.files[0]
     output = args.files[1]
@@ -1039,7 +1046,8 @@ def main():
     lang = args.lang
 
     processor = Processor()
-    splitter = Splitter(processor)
+    splitter = Splitter(processor,
+                        code_tags=(args.code_start, args.code_end))
     splitter.split(open(input_).read().decode('utf-8'))
     processor.finish()
 
