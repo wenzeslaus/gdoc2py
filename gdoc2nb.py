@@ -148,7 +148,7 @@ def module_to_python(module):
                 return "# execute manually the following or its equivalent:\n# %s" % module.original_string
 
     is_reading = False
-    if module.name in ['r.category', 'r.report', 'v.info'] or (module.name == 'r.stats' and not module.uses_option('output')):
+    if module.name in ['r.category', 'r.report'] or (module.name == 'v.info' and 'g' not in module.flags) or (module.name == 'r.stats' and not module.uses_option('output')):
         is_reading = True
 
     if first_option_usable:
@@ -243,7 +243,11 @@ os.environ['GRASS_LEGEND_FILE'] = 'legend.txt'
 
 def start_of_grass_session(string,
                            grass, gisdbase, location, mapset,
-                           extra):
+                           python2=False):
+    if python2:
+        extra = ""
+    else:
+        extra = ", text=True"
     return [
         JUPYTER_INTRODUCTION_CODE.strip(),
         GRASS_START_CODE.strip().format(
@@ -724,12 +728,9 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
                     cell += line + "\n"
             previous_code_line = line
         if re.search('^grass.?.?$', cell):
-            # parameters for subprocess
-            if not self.python2:
-                extra = ", text=True"
             cells = start_of_grass_session(
                 cell, self.grass, self.gisdbase, self.location, self.mapset,
-                extra=extra)
+                python2=self.python2)
         else:
             cells = bash_to_python(cell.strip())
         for cell in cells:
@@ -1064,7 +1065,8 @@ def main():
                 c = HTMLBashCodeToPythonNotebookConverter(
                     notebook, grass=args.grass,
                     gisdbase=args.gisdbase, location=args.location,
-                    mapset=args.mapset)
+                    mapset=args.mapset,
+                    python2=lang == "python2")
             if lang in ('bash', 'bash-cells', 'pure-bash'):
                 if lang == 'bash':
                     syntax = '!'
