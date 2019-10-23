@@ -3,11 +3,13 @@
 """
 
 
-(C) 2016 by Vaclav Petras
+(C) 2016-2019 by Vaclav Petras
 
 This program is free software under the GNU General Public License
 (>=v2). Read the file LICENSE for details.
 """
+
+from __future__ import print_function
 
 import nbformat as nbf
 from nbformat import v4 as nb
@@ -144,6 +146,11 @@ def module_to_python(module):
             #    module.options.insert(0, ('input', module.first_option))
             else:
                 return "# execute manually the following or its equivalent:\n# %s" % module.original_string
+
+    is_reading = False
+    if module.name in ['r.category', 'r.report', 'v.info'] or (module.name == 'r.stats' and not module.uses_option('output')):
+        is_reading = True
+
     if first_option_usable:
         # TODO: support r3.mapcalc
         value = module.first_option
@@ -158,8 +165,8 @@ def module_to_python(module):
             # TODO: do not modify function input
             module.flags += 'g'
         string = "gs.parse_command('%s'" % module.name
-    elif module.name in ['r.category', 'r.report', 'v.info'] or (module.name == 'r.stats' and not module.uses_option('output')):
-        string = "print gs.read_command('%s'" % module.name
+    elif is_reading:
+        string = "print(gs.read_command('%s'" % module.name
     else:
         string = "gs.run_command('%s'" % module.name
     
@@ -180,6 +187,9 @@ def module_to_python(module):
     for flag in module.long_flags:
         string += ", %s=True" % (flag)
     string += ')'
+    if is_reading:
+        # close print call
+        string += ')'
     return string
 
 JUPYTER_INTRODUCTION_CODE = """\
@@ -188,7 +198,7 @@ JUPYTER_INTRODUCTION_CODE = """\
 a = 6
 b = 7
 c = a * b
-print "Answer is", c
+print("Answer is", c)
 # Python code can be mixed with command line code (Bash).
 # It is enough just to prefix the command line with an exclamation mark:
 !echo "Answer is $c"
@@ -202,7 +212,7 @@ import subprocess
 from IPython.display import Image
 
 # create GRASS GIS runtime environment
-gisbase = subprocess.check_output(["{grass}", "--config", "path"]).strip()
+gisbase = subprocess.check_output(["{grass}", "--config", "path"]{extra}).strip()
 os.environ['GISBASE'] = gisbase
 sys.path.append(os.path.join(gisbase, "etc", "python"))
 
@@ -231,11 +241,15 @@ os.environ['GRASS_LEGEND_FILE'] = 'legend.txt'
 """
 # gs.run_command('d.mon', start='cairo')
 
-def start_of_grass_session(string, grass, gisdbase, location, mapset):
+def start_of_grass_session(string,
+                           grass, gisdbase, location, mapset,
+                           extra):
     return [
         JUPYTER_INTRODUCTION_CODE.strip(),
         GRASS_START_CODE.strip().format(
-            grass=grass, gisdbase=gisdbase, location=location, mapset=mapset),
+            grass=grass,
+            gisdbase=gisdbase, location=location, mapset=mapset,
+            extra=extra),
         GRASS_SETTINGS_CODE.strip(),
         GRASS_START_DISPLAY_CODE.strip(),
         ]
@@ -325,12 +339,12 @@ def bash_to_cells(string):
     <type 'list'>
     >>> len(cells)
     2
-    >>> print cells[0]
+    >>> print(cells[0])
     %%bash
     g.region raster=elevation
     r.univar elevation
     d.rast elevation
-    >>> print cells[1]
+    >>> print(cells[1])
     Image(filename="map.png")
 
     """
@@ -414,7 +428,7 @@ class DummyProcessor(object):
                         output += " " + arg
                 for key, value in kwargs.items():
                     output += " %s=%s" % (key, value)
-                print output
+                # print(output)
         return Attr(name)
 
 
@@ -446,7 +460,7 @@ class Splitter(object):
     1
     >>> p.blocks[0]['block_type']
     'text'
-    >>> print "\n".join(p.blocks[0]['content'])
+    >>> print("\n".join(p.blocks[0]['content']))
     Display
     <BLANKLINE>
     <!--
@@ -466,7 +480,7 @@ class Splitter(object):
     1
     >>> p.blocks[0]['block_type']
     'text'
-    >>> print "\n".join(p.blocks[0]['content'])
+    >>> print("\n".join(p.blocks[0]['content']))
     Text.
     <pre data-run="no"><code>
     d.legend
@@ -482,7 +496,7 @@ class Splitter(object):
     1
     >>> p.blocks[0]['block_type']
     'text'
-    >>> print "\n".join(p.blocks[0]['content'])
+    >>> print("\n".join(p.blocks[0]['content']))
     Text.
     <pre data-run="no"><code>
     d.legend
@@ -671,7 +685,7 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
     Image(filename="map.png")
 
     """
-    def __init__(self, notebook, grass=None, gisdbase=None, location=None, mapset=None):
+    def __init__(self, notebook, grass=None, gisdbase=None, location=None, mapset=None, python2=False):
         HTMLParser.__init__(self)
 
         self.nb = notebook
@@ -681,6 +695,8 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
         self.gisdbase = gisdbase
         self.location = location
         self.mapset = mapset
+
+        self.python2 = python2
 
     def handle_data(self, data):
         self.data += data
@@ -708,8 +724,12 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
                     cell += line + "\n"
             previous_code_line = line
         if re.search('^grass.?.?$', cell):
+            # parameters for subprocess
+            if not self.python2:
+                extra = ", text=True"
             cells = start_of_grass_session(
-                cell, self.grass, self.gisdbase, self.location, self.mapset)
+                cell, self.grass, self.gisdbase, self.location, self.mapset,
+                extra=extra)
         else:
             cells = bash_to_python(cell.strip())
         for cell in cells:
@@ -961,11 +981,18 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
             self.data += c
 
 
-def add_file_downloads(notebook, filenames):
-    cell = "# a proper directory is already set, download files\nimport urllib\n"
+def add_file_downloads(notebook, filenames, python2):
+    cell = "# a proper directory is already set, download files\n"
+    if python2:
+        cell += "import urllib\n"
+    else:
+        cell += "import urllib.request\n"
     for filename in filenames:
         name = filename.split('/')[-1]
-        cell += 'urllib.urlretrieve("%s", "%s")\n' % (filename, name)
+        if python2:
+            cell += 'urllib.urlretrieve("%s", "%s")\n' % (filename, name)
+        else:
+            cell += 'urllib.request.urlretrieve("%s", "%s")\n' % (filename, name)
     cell = cell.strip()
     download_text_index = None
     for i, existing_cell in enumerate(notebook['cells']):
@@ -992,7 +1019,7 @@ def main():
     parser.add_argument('files', metavar='FILE', nargs='+',
                         help='Files to convert')
     parser.add_argument('--lang', dest='lang', default='python',
-                        choices=['python', 'bash', 'bash-cells', 'pure-bash'],
+                        choices=['python', 'python2', 'bash', 'bash-cells', 'pure-bash'],
                         help='GRASS GIS executable')
     # TODO: allow no provided
     # TODO: allow mapset as full path
@@ -1012,21 +1039,28 @@ def main():
 
     processor = Processor()
     splitter = Splitter(processor)
-    splitter.split(open(input_).read())
+    splitter.split(open(input_).read().decode('utf-8'))
     processor.finish()
 
     notebook = nb.new_notebook()
-    notebook['metadata']['kernelspec'] = {
-        "display_name": "Python 2",
-        "language": "python",
-        "name": "python2"
-    }
+    if lang == "python2":
+        notebook['metadata']['kernelspec'] = {
+            "display_name": "Python 2",
+            "language": "python",
+            "name": "python2"
+        }
+    else:
+        notebook['metadata']['kernelspec'] = {
+            "display_name": "Python 3",
+            "language": "python",
+            "name": "python3"
+        }
 
     filenames = []
 
     for block in processor.blocks:
         if block['block_type'] == 'code':
-            if lang == 'python':
+            if lang == 'python' or lang == 'python2':
                 c = HTMLBashCodeToPythonNotebookConverter(
                     notebook, grass=args.grass,
                     gisdbase=args.gisdbase, location=args.location,
@@ -1056,7 +1090,7 @@ def main():
             filenames.extend(c.download_files)
 
     if filenames:
-        add_file_downloads(notebook, filenames)
+        add_file_downloads(notebook, filenames, lang == "python2")
     finish_session(notebook)
 
     with open(output, 'w') as f:
