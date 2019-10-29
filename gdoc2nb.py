@@ -1039,6 +1039,9 @@ def main():
     parser.add_argument('--code-end', dest='code_end',
                         default=r"^</code></pre>$",
                         help='Ending tags of a code block (regular expression)')
+    parser.add_argument('--session-after-first-text', dest='session_after_text',
+                        action='store_true',
+                        help='Place a GRASS GIS session code after first text cell')
     args = parser.parse_args()
     input_ = args.files[0]
     output = args.files[1]
@@ -1067,7 +1070,19 @@ def main():
 
     filenames = []
 
+    add_session_start = False
+    first_text_cell = True
+
     for block in processor.blocks:
+        if add_session_start:
+            add_session_start = False
+            cells = start_of_grass_session(
+                "", grass=args.grass,
+                gisdbase=args.gisdbase, location=args.location,
+                mapset=args.mapset,
+                python2=lang == "python2")
+            for cell in cells:
+                notebook['cells'].append(nb.new_code_cell(cell))
         if block['block_type'] == 'code':
             if lang == 'python' or lang == 'python2':
                 c = HTMLBashCodeToPythonNotebookConverter(
@@ -1098,6 +1113,9 @@ def main():
             c.feed("\n".join(block['content']))
             c.finish()
             filenames.extend(c.download_files)
+            if first_text_cell and args.session_after_text:
+                add_session_start = True
+            first_text_cell = False
 
     if filenames:
         add_file_downloads(notebook, filenames, lang == "python2")
