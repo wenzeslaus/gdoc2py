@@ -22,8 +22,8 @@ import keyword
 
 ignored_lines = [
     # re.compile(r'grass70'),
-    re.compile(r'cd'),
-    re.compile(r'cd.*'),
+    re.compile(r"cd"),
+    re.compile(r"cd.*"),
     # re.compile(r'\s*d\.mon'),
     # re.compile(r'\s*d\.out.file')
 ]
@@ -31,44 +31,48 @@ ignored_lines = [
 line_count = 0
 
 common_replacements = [
-    (re.compile('&gt;'), '>'),
-    (re.compile('&lt;'), '<'),
-    (re.compile('&amp;'), '&'),
+    (re.compile("&gt;"), ">"),
+    (re.compile("&lt;"), "<"),
+    (re.compile("&amp;"), "&"),
 ]
 
 # allow also uppper case tags for now
 text_replacemets = [
-    (re.compile(r'<p>', re.IGNORECASE), ''),
-    (re.compile(r'</p>', re.IGNORECASE), ''),
-    (re.compile(r'<br>', re.IGNORECASE), ''),
-    (re.compile(r'<div>', re.IGNORECASE), ''),
-    (re.compile(r'</div>', re.IGNORECASE), ''),
-    (re.compile(r'<a href="([^"]+)">[^<]+</a>', re.IGNORECASE), r'\1'),
-    (re.compile(r'^\s+\n$', re.IGNORECASE), '\n'),
+    (re.compile(r"<p>", re.IGNORECASE), ""),
+    (re.compile(r"</p>", re.IGNORECASE), ""),
+    (re.compile(r"<br>", re.IGNORECASE), ""),
+    (re.compile(r"<div>", re.IGNORECASE), ""),
+    (re.compile(r"</div>", re.IGNORECASE), ""),
+    (re.compile(r'<a href="([^"]+)">[^<]+</a>', re.IGNORECASE), r"\1"),
+    (re.compile(r"^\s+\n$", re.IGNORECASE), "\n"),
 ]
 
 text_replacemets.extend(common_replacements)
 
 file_path_extraction = re.compile(r'<a href="([^"]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
-file_from_url_extraction = re.compile(r'<a href="([^"]+)/([^"/]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
-download_attribute_presence = re.compile(r'<a href="([^"]+)"[^>]* download[^>]*>([^<]+)</a>', re.IGNORECASE)
+file_from_url_extraction = re.compile(
+    r'<a href="([^"]+)/([^"/]+)"[^>]*>([^<]+)</a>', re.IGNORECASE
+)
+download_attribute_presence = re.compile(
+    r'<a href="([^"]+)"[^>]* download[^>]*>([^<]+)</a>', re.IGNORECASE
+)
 
 code_replacemets = [
-#    (re.compile('d.mon wx.'), 'd.mon cairo'),
-#    (re.compile('d.out.file (.+)(.png|)'),
-#     r'# save the currently rendered image (generated replacement of d.out.file)\ncp map.png \1.png'),
+    #    (re.compile('d.mon wx.'), 'd.mon cairo'),
+    #    (re.compile('d.out.file (.+)(.png|)'),
+    #     r'# save the currently rendered image (generated replacement of d.out.file)\ncp map.png \1.png'),
 ]
 
 # code_replacemets.extend(common_replacements)
 
-d_command = re.compile(r'd\..+ .+')
+d_command = re.compile(r"d\..+ .+")
 
 
 class Module(object):
     def __init__(self):
         self.name = None
         self.options = []  # as list to preserve order
-        self.flags = ''
+        self.flags = ""
         self.long_flags = []
         self.first_option = None
         self.original_string = None
@@ -119,34 +123,42 @@ def string_to_module(string):
 def module_to_python(module):
     first_option_usable = False
     if module.first_option:
-        if module.name in ['r.mapcalc']:
+        if module.name in ["r.mapcalc"]:
             first_option_usable = True
         else:
             # this is just guessing, only safe way is the fallback
-            if module.uses_options(('output', 'out')):
+            if module.uses_options(("output", "out")):
                 # TODO: do not modify function input
-                module.options.insert(0, ('input', module.first_option))
-            elif module.name == 'g.region':
-                module.options.insert(0, ('region', module.first_option))
-            elif module.name == 'd.legend':
-                module.options.insert(0, ('raster', module.first_option))
-            elif module.name == 'r.stats':  # r.stats has optional output
-                module.options.insert(0, ('input', module.first_option))
-            elif (module.name.startswith(('d.', 'r.', 'v.')) and
-                  module.name not in ['d.out.file']):
+                module.options.insert(0, ("input", module.first_option))
+            elif module.name == "g.region":
+                module.options.insert(0, ("region", module.first_option))
+            elif module.name == "d.legend":
+                module.options.insert(0, ("raster", module.first_option))
+            elif module.name == "r.stats":  # r.stats has optional output
+                module.options.insert(0, ("input", module.first_option))
+            elif module.name.startswith(("d.", "r.", "v.")) and module.name not in [
+                "d.out.file"
+            ]:
                 # TODO: do not modify function input
-                module.options.insert(0, ('map', module.first_option))
-            #elif module.name.startswith('d.'):
+                module.options.insert(0, ("map", module.first_option))
+            # elif module.name.startswith('d.'):
             #    # TODO: do not modify function input
             #    module.options.insert(0, ('map', module.first_option))
-            #elif module.name.startswith('r.'):
+            # elif module.name.startswith('r.'):
             #    # TODO: do not modify function input
             #    module.options.insert(0, ('input', module.first_option))
             else:
-                return "# execute manually the following or its equivalent:\n# %s" % module.original_string
+                return (
+                    "# execute manually the following or its equivalent:\n# %s"
+                    % module.original_string
+                )
 
     is_reading = False
-    if module.name in ['r.category', 'r.report'] or (module.name == 'v.info' and 'g' not in module.flags) or (module.name == 'r.stats' and not module.uses_option('output')):
+    if (
+        module.name in ["r.category", "r.report"]
+        or (module.name == "v.info" and "g" not in module.flags)
+        or (module.name == "r.stats" and not module.uses_option("output"))
+    ):
         is_reading = True
 
     if first_option_usable:
@@ -158,16 +170,20 @@ def module_to_python(module):
         elif "'" in value:
             quote = '"'
         string = "gs.mapcalc(%s%s%s" % (quote, value, quote)
-    elif module.name in ['r.info', 'r.univar', 'v.univar'] or (module.name == 'v.info' and 'c' not in module.flags) or (module.name == 'g.region' and ('p' in module.flags or 'g' in module.flags)):
-        if 'g' not in module.flags:
+    elif (
+        module.name in ["r.info", "r.univar", "v.univar"]
+        or (module.name == "v.info" and "c" not in module.flags)
+        or (module.name == "g.region" and ("p" in module.flags or "g" in module.flags))
+    ):
+        if "g" not in module.flags:
             # TODO: do not modify function input
-            module.flags += 'g'
+            module.flags += "g"
         string = "gs.parse_command('%s'" % module.name
     elif is_reading:
         string = "print(gs.read_command('%s'" % module.name
     else:
         string = "gs.run_command('%s'" % module.name
-    
+
     for key, value in module.options:
         # TODO: customize preferred quote
         quote = '"'
@@ -176,7 +192,7 @@ def module_to_python(module):
         elif "'" in value:
             quote = '"'
         if key in keyword.kwlist:
-            key += '_'
+            key += "_"
         string += ", %s=%s%s%s" % (key, quote, value, quote)
 
     if module.flags:
@@ -184,11 +200,12 @@ def module_to_python(module):
 
     for flag in module.long_flags:
         string += ", %s=True" % (flag)
-    string += ')'
+    string += ")"
     if is_reading:
         # close print call
-        string += ')'
+        string += ")"
     return string
+
 
 JUPYTER_INTRODUCTION_CODE = """\
 # This is a quick introduction into Jupyter Notebook.
@@ -239,9 +256,8 @@ os.environ['GRASS_LEGEND_FILE'] = 'legend.txt'
 """
 # gs.run_command('d.mon', start='cairo')
 
-def start_of_grass_session(string,
-                           grass, gisdbase, location, mapset,
-                           python2=False):
+
+def start_of_grass_session(string, grass, gisdbase, location, mapset, python2=False):
     if python2:
         extra = ""
     else:
@@ -250,39 +266,42 @@ def start_of_grass_session(string,
         JUPYTER_INTRODUCTION_CODE.strip(),
         GRASS_START_CODE.strip().format(
             grass=grass,
-            gisdbase=gisdbase, location=location, mapset=mapset,
-            extra=extra),
+            gisdbase=gisdbase,
+            location=location,
+            mapset=mapset,
+            extra=extra,
+        ),
         GRASS_SETTINGS_CODE.strip(),
         GRASS_START_DISPLAY_CODE.strip(),
-        ]
+    ]
 
 
 # TODO: refactor the following 4 functions
 def bash_to_python(string):
     output = []
-    prev_line = ''
+    prev_line = ""
     d_command_present = False
     last_command = None
     for line in string.splitlines():
         if line:
-            if line.endswith('\\'):
+            if line.endswith("\\"):
                 prev_line += line + "\n"
                 continue
             elif prev_line:
                 line = prev_line + line
-                prev_line = ''
+                prev_line = ""
             module = string_to_module(line)
             # TODO: potentially split to cells when d.out.file
-            if module.name == 'd.out.file':
+            if module.name == "d.out.file":
                 output.append('Image(filename="map.png")')
             else:
                 output.append(module_to_python(module))
-                if module.name.startswith('d.'):
+                if module.name.startswith("d."):
                     d_command_present = True
             last_command = module.name
         else:
             output.append("\n")
-    if d_command_present and last_command != 'd.out.file':
+    if d_command_present and last_command != "d.out.file":
         output.append('Image(filename="map.png")')
     return ["\n".join(output)]
 
@@ -293,35 +312,35 @@ def bash_to_pure_bash_cells(string):
     # TODO: preserve syntax more while still handling d.out.file
     cells = []
     output = []
-    prev_line = ''
+    prev_line = ""
     d_command_present = False
     last_command = None
     for line in string.splitlines():
         if line:
-            if line.endswith('\\'):
+            if line.endswith("\\"):
                 prev_line += line + "\n"
                 continue
             elif prev_line:
                 line = prev_line + line
-                prev_line = ''
+                prev_line = ""
             # TODO: potentially split to cells when d.out.file
-            if line.startswith('d.out.file'):
+            if line.startswith("d.out.file"):
                 cells.append("\n".join(output))
                 # pseudo cell magic to be replaced later
-                output = ['%%markdown', '![image](map.png)']
+                output = ["%%markdown", "![image](map.png)"]
                 cells.append("\n".join(output))
                 output = []
             else:
                 output.append(line)
-                if line.startswith('d.'):
+                if line.startswith("d."):
                     d_command_present = True
             last_command = line
         else:
             output.append("\n")
     if output:
         cells.append("\n".join(output))
-    if d_command_present and not last_command.startswith('d.out.file'):
-        cells.append("\n".join(['%%markdown', '![image](map.png)']))
+    if d_command_present and not last_command.startswith("d.out.file"):
+        cells.append("\n".join(["%%markdown", "![image](map.png)"]))
     return cells
 
 
@@ -351,33 +370,33 @@ def bash_to_cells(string):
     """
     # TODO: preserve syntax more while still handling d.out.file
     cells = []
-    output = ['%%bash']
-    prev_line = ''
+    output = ["%%bash"]
+    prev_line = ""
     d_command_present = False
     last_command = None
     for line in string.splitlines():
         if line:
-            if line.endswith('\\'):
+            if line.endswith("\\"):
                 prev_line += line + "\n"
                 continue
             elif prev_line:
                 line = prev_line + line
-                prev_line = ''
+                prev_line = ""
             # TODO: potentially split to cells when d.out.file
-            if line.startswith('d.out.file'):
+            if line.startswith("d.out.file"):
                 cells.append("\n".join(output))
                 cells.append('Image(filename="map.png")')
-                output = ['%%bash']
+                output = ["%%bash"]
             else:
                 output.append(line)
-                if line.startswith('d.'):
+                if line.startswith("d."):
                     d_command_present = True
             last_command = line
         else:
             output.append("\n")
     if len(output) > 1:
         cells.append("\n".join(output))
-    if d_command_present and not last_command.startswith('d.out.file'):
+    if d_command_present and not last_command.startswith("d.out.file"):
         cells.append('Image(filename="map.png")')
     return cells
 
@@ -387,30 +406,30 @@ def bash_to_exclamations(string):
     # the ! syntax is limited just to simple commands
     # TODO: but pipe is supported as long as it is in one line
     output = []
-    prev_line = ''
+    prev_line = ""
     d_command_present = False
     last_command = None
     for line in string.splitlines():
         if line:
-            if line.endswith('\\'):
+            if line.endswith("\\"):
                 prev_line += line + "\n"
                 continue
             elif prev_line:
                 line = prev_line + line
-                prev_line = ''
+                prev_line = ""
             module = string_to_module(line)
             # TODO: potentially split to cells when d.out.file
-            if line.startswith('d.out.file'):
+            if line.startswith("d.out.file"):
                 output.append('Image(filename="map.png")')
             else:
                 # exclamations support continued lines with backslash
-                output.append('!' + line)
-                if module.name.startswith('d.'):
+                output.append("!" + line)
+                if module.name.startswith("d."):
                     d_command_present = True
             last_command = module.name
         else:
             output.append("\n")
-    if d_command_present and last_command != 'd.out.file':
+    if d_command_present and last_command != "d.out.file":
         output.append('Image(filename="map.png")')
     return ["\n".join(output)]
 
@@ -420,6 +439,7 @@ class DummyProcessor(object):
         class Attr(object):
             def __init__(self, name):
                 self._name = name
+
             def __call__(self, *args, **kwargs):
                 output = self._name
                 for arg in args:
@@ -428,6 +448,7 @@ class DummyProcessor(object):
                 for key, value in kwargs.items():
                     output += " %s=%s" % (key, value)
                 # print(output)
+
         return Attr(name)
 
 
@@ -523,15 +544,16 @@ class Splitter(object):
     add_text Text.
 
     """
+
     def __init__(self, processor, code_tags=None):
         assert len(code_tags) == 2
         self.processor = processor
         self.code_start = re.compile(code_tags[0])
         self.code_end = re.compile(code_tags[1])
-        self.file_content_start = re.compile(r'^<pre data-filename=.*>$')
-        self.file_content_end = re.compile(r'^</pre>$')
-        self.comment_start = re.compile(r'^\s*<!--')
-        self.comment_end = re.compile(r'-->\s*$')
+        self.file_content_start = re.compile(r"^<pre data-filename=.*>$")
+        self.file_content_end = re.compile(r"^</pre>$")
+        self.comment_start = re.compile(r"^\s*<!--")
+        self.comment_end = re.compile(r"-->\s*$")
         self.in_code = False
         self.in_file_content = False
         self.in_block_comment = False
@@ -592,6 +614,7 @@ class Processor(object):
     'text'
 
     """
+
     def __init__(self):
         self._current_code = None
         self._current_file_content = None
@@ -613,12 +636,9 @@ class Processor(object):
             self.end_text()
 
     def add_block(self, block_type, content, attrs=None):
-        block = {
-            'block_type': block_type,
-            'content': content,
-        }
+        block = {"block_type": block_type, "content": content}
         if attrs:
-            block['attrs'] = attrs
+            block["attrs"] = attrs
         self._blocks.append(block)
 
     def start_text(self, text=None):
@@ -634,7 +654,7 @@ class Processor(object):
         if not self._current_text or not any(self._current_text):
             self._current_text = None
             return
-        self.add_block(block_type='text', content=self._current_text)
+        self.add_block(block_type="text", content=self._current_text)
         self._current_text = None
 
     def start_code(self, text=None):
@@ -645,7 +665,7 @@ class Processor(object):
         self._current_code.append(text)
 
     def end_code(self, text=None):
-        self.add_block(block_type='code', content=self._current_code)
+        self.add_block(block_type="code", content=self._current_code)
         self._current_code = None
         self.start_text()
 
@@ -664,8 +684,10 @@ class Processor(object):
         self._current_file_content.append(text)
 
     def end_file_content(self, text=None):
-        attrs = {'filename': self._current_filename}
-        self.add_block(block_type='file_content', content=self._current_file_content, attrs=attrs)
+        attrs = {"filename": self._current_filename}
+        self.add_block(
+            block_type="file_content", content=self._current_file_content, attrs=attrs
+        )
         self.start_text()
 
 
@@ -685,11 +707,20 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
     Image(filename="map.png")
 
     """
-    def __init__(self, notebook, grass=None, gisdbase=None, location=None, mapset=None, python2=False):
+
+    def __init__(
+        self,
+        notebook,
+        grass=None,
+        gisdbase=None,
+        location=None,
+        mapset=None,
+        python2=False,
+    ):
         HTMLParser.__init__(self)
 
         self.nb = notebook
-        self.data = ''
+        self.data = ""
 
         self.grass = grass
         self.gisdbase = gisdbase
@@ -706,13 +737,13 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
         self.data += c
 
     def handle_comment(self, data):
-        if data.strip().startswith('d.erase'):
+        if data.strip().startswith("d.erase"):
             self.data += data.strip()
 
     def finish(self):
-        cell = ''
+        cell = ""
         for line in self.data.splitlines():
-            line = re.sub('<!--.*-->', '', line)
+            line = re.sub("<!--.*-->", "", line)
             skip_line = False
             for ignored_line in ignored_lines:
                 if ignored_line.search(line):
@@ -722,15 +753,20 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
                     line = regexp.sub(replacement, line)
                 if line:
                     cell += line + "\n"
-        if re.search('^grass.?.?$', cell):
+        if re.search("^grass.?.?$", cell):
             cells = start_of_grass_session(
-                cell, self.grass, self.gisdbase, self.location, self.mapset,
-                python2=self.python2)
+                cell,
+                self.grass,
+                self.gisdbase,
+                self.location,
+                self.mapset,
+                python2=self.python2,
+            )
         else:
             cells = bash_to_python(cell.strip())
         for cell in cells:
-            self.nb['cells'].append(nb.new_code_cell(cell))
-        self.data = ''
+            self.nb["cells"].append(nb.new_code_cell(cell))
+        self.data = ""
 
 
 class HTMLBashCodeToNotebookConverter(HTMLParser):
@@ -778,15 +814,24 @@ class HTMLBashCodeToNotebookConverter(HTMLParser):
     ![image](map.png)
 
     """
-    def __init__(self, notebook, syntax='!', grass=None, gisdbase=None, location=None, mapset=None):
+
+    def __init__(
+        self,
+        notebook,
+        syntax="!",
+        grass=None,
+        gisdbase=None,
+        location=None,
+        mapset=None,
+    ):
         HTMLParser.__init__(self)
 
-        if syntax not in ('pure', 'cell', '!'):
+        if syntax not in ("pure", "cell", "!"):
             raise ValueError("Requested output syntax not recognized")
         self._syntax = syntax
 
         self.nb = notebook
-        self.data = ''
+        self.data = ""
 
         self.grass = grass
         self.gisdbase = gisdbase
@@ -801,13 +846,13 @@ class HTMLBashCodeToNotebookConverter(HTMLParser):
         self.data += c
 
     def handle_comment(self, data):
-        if data.strip().startswith('d.erase'):
+        if data.strip().startswith("d.erase"):
             self.data += data.strip()
 
     def finish(self):
-        cell = ''
+        cell = ""
         for line in self.data.splitlines():
-            line = re.sub('<!--.*-->', '', line)
+            line = re.sub("<!--.*-->", "", line)
             skip_line = False
             for ignored_line in ignored_lines:
                 if ignored_line.search(line):
@@ -817,22 +862,25 @@ class HTMLBashCodeToNotebookConverter(HTMLParser):
                     line = regexp.sub(replacement, line)
                 if line:
                     cell += line + "\n"
-        if re.search('^grass.?.?$', cell):
+        if re.search("^grass.?.?$", cell):
             cells = start_of_grass_session(
-                cell, self.grass, self.gisdbase, self.location, self.mapset)
+                cell, self.grass, self.gisdbase, self.location, self.mapset
+            )
             # TODO: the env vars need to be in bash for the pure bash
-            cells = ['# using Python to initialize GRASS GIS\n' + cell for cell in cells]
+            cells = [
+                "# using Python to initialize GRASS GIS\n" + cell for cell in cells
+            ]
         else:
-            if self._syntax == 'pure':
+            if self._syntax == "pure":
                 cells = bash_to_pure_bash_cells(cell.strip())
-            elif self._syntax == 'cell':
+            elif self._syntax == "cell":
                 cells = bash_to_cells(cell.strip())
             else:
                 cells = bash_to_exclamations(cell.strip())
         for cell in cells:
             # TODO: deal with the pseudo cell magic %%markdown cells
-            self.nb['cells'].append(nb.new_code_cell(cell))
-        self.data = ''
+            self.nb["cells"].append(nb.new_code_cell(cell))
+        self.data = ""
 
 
 class HTMLFileContentToPythonNotebookConverter(HTMLParser):
@@ -850,12 +898,13 @@ class HTMLFileContentToPythonNotebookConverter(HTMLParser):
     70 aqua
 
     """
+
     def __init__(self, notebook, filename):
         HTMLParser.__init__(self)
 
         self.nb = notebook
         self.filename = filename
-        self.data = ''
+        self.data = ""
 
     def handle_data(self, data):
         self.data += data
@@ -865,11 +914,11 @@ class HTMLFileContentToPythonNotebookConverter(HTMLParser):
         self.data += c
 
     def finish(self):
-        cell = ''
+        cell = ""
         # process pre content as file
         cell = "%%%%file %s\n%s" % (self.filename, self.data.strip())
-        self.nb['cells'].append(nb.new_code_cell(cell))
-        self.data = ''
+        self.nb["cells"].append(nb.new_code_cell(cell))
+        self.data = ""
 
 
 class HTMLToMarkdownNotebookConverter(HTMLParser):
@@ -897,13 +946,14 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
     ```
     Text.
     """
+
     def __init__(self, notebook):
         HTMLParser.__init__(self)
 
         self.in_pre = False
 
         self.nb = notebook
-        self.data = ''
+        self.data = ""
         # used to carry hyperlink data
         self.link_url = None
         # used to carry hyperlink data
@@ -915,61 +965,63 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
         # process text
         cell = self.data.strip()
         if cell:
-            self.nb['cells'].append(nb.new_markdown_cell(cell))
-            self.data = ''
+            self.nb["cells"].append(nb.new_markdown_cell(cell))
+            self.data = ""
 
     def handle_starttag(self, tag, attrs):
         if re.search(r"^h(\d)$", tag):
             # TODO: check std heading syntax
             nchars = int(tag[1])
-            self.data += '#' * nchars + " "
-        elif tag == 'li':
+            self.data += "#" * nchars + " "
+        elif tag == "li":
             if self.data[-1] != "\n":
                 self.data += "\n"
-            self.data += '* '
-        elif tag == 'em':
+            self.data += "* "
+        elif tag == "em":
             # TODO: more robust test
             # TODO: list to module
             # if 'class' in attrs and 'module' in attrs['class']:
-            self.data += '_'
-        elif tag == 'a':
-            self.data += '['
+            self.data += "_"
+        elif tag == "a":
+            self.data += "["
             # possibly just store last tag attrs
             for key, value in attrs:
-                if key == 'href':
+                if key == "href":
                     self.link_url = value
                     break
-        elif tag == 'code' and not self.in_pre:
-            self.data += '`'
-        elif tag == 'pre':
+        elif tag == "code" and not self.in_pre:
+            self.data += "`"
+        elif tag == "pre":
             self.in_pre = True
-            self.data += '```'
+            self.data += "```"
         # elif tag == 'blockquote':
         #    self.data += '\n\n\t'
-
 
     def handle_endtag(self, tag):
         # if tag == 'blockquote':
         #     self.data += "\n\n"
-        if tag == 'em':
-            self.data += '_'
-        elif tag == 'a':
+        if tag == "em":
+            self.data += "_"
+        elif tag == "a":
             # TODO: URLs need adding http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/ if relative
-            self.data += '](%s)' % self.link_url
-            if self.link_url.startswith('data/'):
-                self.download_files.append("http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/" + self.link_url)
+            self.data += "](%s)" % self.link_url
+            if self.link_url.startswith("data/"):
+                self.download_files.append(
+                    "http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/"
+                    + self.link_url
+                )
             self.link_url = None
-        elif tag == 'pre':
-            self.data += '```'
+        elif tag == "pre":
+            self.data += "```"
             self.in_pre = False
-        elif tag == 'code' and not self.in_pre:
-            self.data += '`'
+        elif tag == "code" and not self.in_pre:
+            self.data += "`"
 
     def handle_data(self, data):
         self.data += data
 
     def handle_entityref(self, name):
-        if name == 'ndash':
+        if name == "ndash":
             self.data += "--"
         else:
             c = chr(name2codepoint[name])
@@ -983,58 +1035,76 @@ def add_file_downloads(notebook, filenames, python2):
     else:
         cell += "import urllib.request\n"
     for filename in filenames:
-        name = filename.split('/')[-1]
+        name = filename.split("/")[-1]
         if python2:
             cell += 'urllib.urlretrieve("%s", "%s")\n' % (filename, name)
         else:
             cell += 'urllib.request.urlretrieve("%s", "%s")\n' % (filename, name)
     cell = cell.strip()
     download_text_index = None
-    for i, existing_cell in enumerate(notebook['cells']):
+    for i, existing_cell in enumerate(notebook["cells"]):
         if existing_cell.source.startswith("Download all text files"):
             download_text_index = i
             break
     if download_text_index is None:
         # TODO: better guess than 2?
-        notebook['cells'].insert(2, nb.new_code_cell(cell))
+        notebook["cells"].insert(2, nb.new_code_cell(cell))
     else:
         # insert before
-        notebook['cells'].insert(download_text_index, nb.new_code_cell(cell))
-        if not notebook['cells'][download_text_index - 1].source:
-            del notebook['cells'][download_text_index - 1]
+        notebook["cells"].insert(download_text_index, nb.new_code_cell(cell))
+        if not notebook["cells"][download_text_index - 1].source:
+            del notebook["cells"][download_text_index - 1]
 
 
 def finish_session(notebook):
     code = "# end the GRASS session\nos.remove(rcfile)"
-    notebook['cells'].append(nb.new_code_cell(code))
+    notebook["cells"].append(nb.new_code_cell(code))
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert HTML documentation to Jupyter Notebook.')
-    parser.add_argument('files', metavar='FILE', nargs='+',
-                        help='Files to convert')
-    parser.add_argument('--lang', dest='lang', default='python',
-                        choices=['python', 'python2', 'bash', 'bash-cells', 'pure-bash'],
-                        help='GRASS GIS executable')
+    parser = argparse.ArgumentParser(
+        description="Convert HTML documentation to Jupyter Notebook."
+    )
+    parser.add_argument("files", metavar="FILE", nargs="+", help="Files to convert")
+    parser.add_argument(
+        "--lang",
+        dest="lang",
+        default="python",
+        choices=["python", "python2", "bash", "bash-cells", "pure-bash"],
+        help="GRASS GIS executable",
+    )
     # TODO: allow no provided
     # TODO: allow mapset as full path
-    parser.add_argument('--grass', dest='grass', default='grass',
-                        help='GRASS GIS executable')
-    parser.add_argument('--gisdbase', dest='gisdbase', required=True,
-                        help='GRASS GIS Database')
-    parser.add_argument('--location', dest='location', required=True,
-                        help='GRASS GIS Location')
-    parser.add_argument('--mapset', dest='mapset', required=True,
-                        help='GRASS GIS Mapset')
-    parser.add_argument('--code-start', dest='code_start',
-                        default=r"^<pre><code>$",
-                        help='Starting tags of a code block (regular expression)')
-    parser.add_argument('--code-end', dest='code_end',
-                        default=r"^</code></pre>$",
-                        help='Ending tags of a code block (regular expression)')
-    parser.add_argument('--session-after-first-text', dest='session_after_text',
-                        action='store_true',
-                        help='Place a GRASS GIS session code after first text cell')
+    parser.add_argument(
+        "--grass", dest="grass", default="grass", help="GRASS GIS executable"
+    )
+    parser.add_argument(
+        "--gisdbase", dest="gisdbase", required=True, help="GRASS GIS Database"
+    )
+    parser.add_argument(
+        "--location", dest="location", required=True, help="GRASS GIS Location"
+    )
+    parser.add_argument(
+        "--mapset", dest="mapset", required=True, help="GRASS GIS Mapset"
+    )
+    parser.add_argument(
+        "--code-start",
+        dest="code_start",
+        default=r"^<pre><code>$",
+        help="Starting tags of a code block (regular expression)",
+    )
+    parser.add_argument(
+        "--code-end",
+        dest="code_end",
+        default=r"^</code></pre>$",
+        help="Ending tags of a code block (regular expression)",
+    )
+    parser.add_argument(
+        "--session-after-first-text",
+        dest="session_after_text",
+        action="store_true",
+        help="Place a GRASS GIS session code after first text cell",
+    )
     args = parser.parse_args()
     input_ = args.files[0]
     output = args.files[1]
@@ -1042,23 +1112,22 @@ def main():
     lang = args.lang
 
     processor = Processor()
-    splitter = Splitter(processor,
-                        code_tags=(args.code_start, args.code_end))
+    splitter = Splitter(processor, code_tags=(args.code_start, args.code_end))
     splitter.split(open(input_).read())
     processor.finish()
 
     notebook = nb.new_notebook()
     if lang == "python2":
-        notebook['metadata']['kernelspec'] = {
+        notebook["metadata"]["kernelspec"] = {
             "display_name": "Python 2",
             "language": "python",
-            "name": "python2"
+            "name": "python2",
         }
     else:
-        notebook['metadata']['kernelspec'] = {
+        notebook["metadata"]["kernelspec"] = {
             "display_name": "Python 3",
             "language": "python",
-            "name": "python3"
+            "name": "python3",
         }
 
     filenames = []
@@ -1070,40 +1139,51 @@ def main():
         if add_session_start:
             add_session_start = False
             cells = start_of_grass_session(
-                "", grass=args.grass,
-                gisdbase=args.gisdbase, location=args.location,
+                "",
+                grass=args.grass,
+                gisdbase=args.gisdbase,
+                location=args.location,
                 mapset=args.mapset,
-                python2=lang == "python2")
+                python2=lang == "python2",
+            )
             for cell in cells:
-                notebook['cells'].append(nb.new_code_cell(cell))
-        if block['block_type'] == 'code':
-            if lang == 'python' or lang == 'python2':
+                notebook["cells"].append(nb.new_code_cell(cell))
+        if block["block_type"] == "code":
+            if lang == "python" or lang == "python2":
                 c = HTMLBashCodeToPythonNotebookConverter(
-                    notebook, grass=args.grass,
-                    gisdbase=args.gisdbase, location=args.location,
+                    notebook,
+                    grass=args.grass,
+                    gisdbase=args.gisdbase,
+                    location=args.location,
                     mapset=args.mapset,
-                    python2=lang == "python2")
-            if lang in ('bash', 'bash-cells', 'pure-bash'):
-                if lang == 'bash':
-                    syntax = '!'
-                elif lang == 'bash-cells':
-                    syntax = 'cell'
-                elif lang == 'pure-bash':
-                    syntax = 'pure'
+                    python2=lang == "python2",
+                )
+            if lang in ("bash", "bash-cells", "pure-bash"):
+                if lang == "bash":
+                    syntax = "!"
+                elif lang == "bash-cells":
+                    syntax = "cell"
+                elif lang == "pure-bash":
+                    syntax = "pure"
                 c = HTMLBashCodeToNotebookConverter(
-                    notebook, syntax=syntax, grass=args.grass,
-                    gisdbase=args.gisdbase, location=args.location,
-                    mapset=args.mapset)
-            c.feed("\n".join(block['content']))
+                    notebook,
+                    syntax=syntax,
+                    grass=args.grass,
+                    gisdbase=args.gisdbase,
+                    location=args.location,
+                    mapset=args.mapset,
+                )
+            c.feed("\n".join(block["content"]))
             c.finish()
-        elif block['block_type'] == 'file_content':
+        elif block["block_type"] == "file_content":
             c = HTMLFileContentToPythonNotebookConverter(
-                notebook, filename=block['attrs']['filename'])
-            c.feed("\n".join(block['content']))
+                notebook, filename=block["attrs"]["filename"]
+            )
+            c.feed("\n".join(block["content"]))
             c.finish()
-        elif block['block_type'] == 'text':
+        elif block["block_type"] == "text":
             c = HTMLToMarkdownNotebookConverter(notebook)
-            c.feed("\n".join(block['content']))
+            c.feed("\n".join(block["content"]))
             c.finish()
             filenames.extend(c.download_files)
             if first_text_cell and args.session_after_text:
@@ -1114,16 +1194,17 @@ def main():
         add_file_downloads(notebook, filenames, lang == "python2")
     finish_session(notebook)
 
-    with open(output, 'w') as f:
+    with open(output, "w") as f:
         nbf.write(notebook, f)
 
 
 def test():
     import doctest
+
     doctest.testmod()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) == 2 and sys.argv[1] == '--doctest':
+if __name__ == "__main__":
+    if len(sys.argv) == 2 and sys.argv[1] == "--doctest":
         sys.exit(test())
     main()
