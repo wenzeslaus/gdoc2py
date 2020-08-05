@@ -13,7 +13,6 @@ This program is free software under the GNU General Public License
 import nbformat as nbf
 from nbformat import v4 as nb
 import sys
-import fileinput
 import argparse
 from html.parser import HTMLParser
 from html.entities import name2codepoint
@@ -726,7 +725,6 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
                     line = regexp.sub(replacement, line)
                 if line:
                     cell += line + "\n"
-            previous_code_line = line
         if re.search('^grass.?.?$', cell):
             cells = start_of_grass_session(
                 cell, self.grass, self.gisdbase, self.location, self.mapset,
@@ -822,7 +820,6 @@ class HTMLBashCodeToNotebookConverter(HTMLParser):
                     line = regexp.sub(replacement, line)
                 if line:
                     cell += line + "\n"
-            previous_code_line = line
         if re.search('^grass.?.?$', cell):
             cells = start_of_grass_session(
                 cell, self.grass, self.gisdbase, self.location, self.mapset)
