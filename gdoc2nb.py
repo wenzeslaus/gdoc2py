@@ -3,21 +3,20 @@
 """
 
 
-(C) 2016-2019 by Vaclav Petras
+(C) 2016-2020 by Vaclav Petras
 
 This program is free software under the GNU General Public License
 (>=v2). Read the file LICENSE for details.
 """
 
-from __future__ import print_function
 
 import nbformat as nbf
 from nbformat import v4 as nb
 import sys
 import fileinput
 import argparse
-from HTMLParser import HTMLParser
-from htmlentitydefs import name2codepoint
+from html.parser import HTMLParser
+from html.entities import name2codepoint
 import shlex
 import re
 import keyword
@@ -707,7 +706,7 @@ class HTMLBashCodeToPythonNotebookConverter(HTMLParser):
         self.data += data
 
     def handle_entityref(self, name):
-        c = unichr(name2codepoint[name])
+        c = chr(name2codepoint[name])
         self.data += c
 
     def handle_comment(self, data):
@@ -803,7 +802,7 @@ class HTMLBashCodeToNotebookConverter(HTMLParser):
         self.data += data
 
     def handle_entityref(self, name):
-        c = unichr(name2codepoint[name])
+        c = chr(name2codepoint[name])
         self.data += c
 
     def handle_comment(self, data):
@@ -868,7 +867,7 @@ class HTMLFileContentToPythonNotebookConverter(HTMLParser):
         self.data += data
 
     def handle_entityref(self, name):
-        c = unichr(name2codepoint[name])
+        c = chr(name2codepoint[name])
         self.data += c
 
     def finish(self):
@@ -979,7 +978,7 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
         if name == 'ndash':
             self.data += "--"
         else:
-            c = unichr(name2codepoint[name])
+            c = chr(name2codepoint[name])
             self.data += c
 
 
@@ -1051,7 +1050,7 @@ def main():
     processor = Processor()
     splitter = Splitter(processor,
                         code_tags=(args.code_start, args.code_end))
-    splitter.split(open(input_).read().decode('utf-8'))
+    splitter.split(open(input_).read())
     processor.finish()
 
     notebook = nb.new_notebook()
