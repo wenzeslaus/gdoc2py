@@ -59,9 +59,9 @@ code_replacemets = [
 #     r'# save the currently rendered image (generated replacement of d.out.file)\ncp map.png \1.png'),
 ]
 
-#code_replacemets.extend(common_replacements)
+# code_replacemets.extend(common_replacements)
 
-d_command = re.compile('d\..+ .+')
+d_command = re.compile(r'd\..+ .+')
 
 
 class Module(object):
@@ -304,7 +304,6 @@ def bash_to_pure_bash_cells(string):
             elif prev_line:
                 line = prev_line + line
                 prev_line = ''
-            module = string_to_module(line)
             # TODO: potentially split to cells when d.out.file
             if line.startswith('d.out.file'):
                 cells.append("\n".join(output))
@@ -364,7 +363,6 @@ def bash_to_cells(string):
             elif prev_line:
                 line = prev_line + line
                 prev_line = ''
-            module = string_to_module(line)
             # TODO: potentially split to cells when d.out.file
             if line.startswith('d.out.file'):
                 cells.append("\n".join(output))
@@ -378,7 +376,6 @@ def bash_to_cells(string):
         else:
             output.append("\n")
     if len(output) > 1:
-        #print output
         cells.append("\n".join(output))
     if d_command_present and not last_command.startswith('d.out.file'):
         cells.append('Image(filename="map.png")')
@@ -922,7 +919,7 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
             self.data = ''
 
     def handle_starttag(self, tag, attrs):
-        if re.search("^h(\d)$", tag):
+        if re.search(r"^h(\d)$", tag):
             # TODO: check std heading syntax
             nchars = int(tag[1])
             self.data += '#' * nchars + " "
@@ -947,15 +944,15 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
         elif tag == 'pre':
             self.in_pre = True
             self.data += '```'
-        #elif tag == 'blockquote':
+        # elif tag == 'blockquote':
         #    self.data += '\n\n\t'
 
 
     def handle_endtag(self, tag):
-        #if tag == 'blockquote':
-        #    self.data += "\n\n"
+        # if tag == 'blockquote':
+        #     self.data += "\n\n"
         if tag == 'em':
-             self.data += '_'
+            self.data += '_'
         elif tag == 'a':
             # TODO: URLs need adding http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/ if relative
             self.data += '](%s)' % self.link_url
