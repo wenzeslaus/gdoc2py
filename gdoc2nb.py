@@ -544,7 +544,7 @@ class Splitter(object):
     end_file_content </pre>
     add_text Text.
 
-    """
+    """  # noqa: E501
 
     def __init__(self, processor, code_tags=None):
         assert len(code_tags) == 2
@@ -614,7 +614,7 @@ class Processor(object):
     >>> p.blocks[1]['block_type']
     'text'
 
-    """
+    """  # noqa: E501
 
     def __init__(self):
         self._current_code = None
