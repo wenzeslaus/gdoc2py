@@ -60,7 +60,8 @@ download_attribute_presence = re.compile(
 code_replacemets = [
     #    (re.compile('d.mon wx.'), 'd.mon cairo'),
     #    (re.compile('d.out.file (.+)(.png|)'),
-    #     r'# save the currently rendered image (generated replacement of d.out.file)\ncp map.png \1.png'),
+    #     r"# save the currently rendered image (generated replacement of d.out.file)"
+    #      "\ncp map.png \1.png"),
 ]
 
 # code_replacemets.extend(common_replacements)
@@ -1003,11 +1004,14 @@ class HTMLToMarkdownNotebookConverter(HTMLParser):
         if tag == "em":
             self.data += "_"
         elif tag == "a":
-            # TODO: URLs need adding http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/ if relative
+            # TODO: URLs need adding
+            # http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/
+            # if any relative (as in ../ etc., not just data/)
             self.data += "](%s)" % self.link_url
             if self.link_url.startswith("data/"):
                 self.download_files.append(
-                    "http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/"
+                    # URL-only lines should be ignored automatically
+                    "http://ncsu-geoforall-lab.github.io/geospatial-modeling-course/grass/"  # noqa: E501
                     + self.link_url
                 )
             self.link_url = None
